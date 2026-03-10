@@ -9,7 +9,8 @@ const GLOBAL_CONFIG_DIR = path.join(process.env.HOME || '~', '.config', 'fleetha
 export async function loadConfig(opts: Record<string, any>): Promise<FleetHawkConfig> {
   // 1. Explicit config path
   if (opts.config) {
-    return parseConfigFile(opts.config);
+    const config = parseConfigFile(opts.config);
+    return mergeCliOpts(config, opts);
   }
 
   // 2. If --fleet is given, use auto-discovery (skip config file search)

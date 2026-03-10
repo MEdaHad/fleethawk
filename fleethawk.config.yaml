@@ -1,0 +1,101 @@
+# FleetHawk Config — Auto-generated
+# 11 agents discovered from /Users/echoenv/.openclaw/agents
+
+fleet_dir: /Users/echoenv/.openclaw/agents
+idle_threshold: 30m
+poll_interval: 5m
+agents:
+  - name: apex
+    dir: /Users/echoenv/.openclaw/agents/apex/agent
+    workspace: /Users/echoenv/.openclaw/workspace-apex
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: '*.ts,*.js,*.json,*.md,*.py'
+      - file_size: true
+  - name: cipher
+    dir: /Users/echoenv/.openclaw/agents/cipher/agent
+    workspace: /Users/echoenv/.openclaw/workspace-cipher
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: '*.ts,*.js,*.json,*.md,*.py'
+      - file_size: true
+  - name: claude
+    dir: /Users/echoenv/.openclaw/agents/claude/agent
+    workspace: /Users/echoenv/.openclaw/workspace-claude
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: '*.ts,*.js,*.json,*.md,*.py'
+      - file_size: true
+  - name: codex
+    dir: /Users/echoenv/.openclaw/agents/codex/agent
+    workspace: /Users/echoenv/.openclaw/workspace-codex
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: '*.ts,*.js,*.json,*.md,*.py'
+      - file_size: true
+  - name: echo
+    dir: /Users/echoenv/.openclaw/agents/echo/agent
+    workspace: /Users/echoenv/.openclaw/workspace-echo
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: '*.ts,*.js,*.json,*.md,*.py'
+      - file_size: true
+  - name: main
+    dir: /Users/echoenv/.openclaw/agents/main/agent
+    workspace: /Users/echoenv/.openclaw/workspace
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: '*.ts,*.js,*.json,*.md,*.py'
+      - file_size: true
+  - name: memo
+    dir: /Users/echoenv/.openclaw/agents/memo/agent
+    workspace: /Users/echoenv/.openclaw/workspace-memo
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: '*.ts,*.js,*.json,*.md,*.py'
+      - file_size: true
+  - name: neok
+    dir: /Users/echoenv/.openclaw/agents/neok/agent
+    workspace: /Users/echoenv/.openclaw/workspace-neok
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: '*.ts,*.js,*.json,*.md,*.py'
+      - file_size: true
+  - name: nova
+    dir: /Users/echoenv/.openclaw/agents/nova/agent
+    workspace: /Users/echoenv/.openclaw/workspace-nova
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: '*.ts,*.js,*.json,*.md,*.py'
+      - file_size: true
+  - name: spark
+    dir: /Users/echoenv/.openclaw/agents/spark/agent
+    workspace: /Users/echoenv/.openclaw/workspace-spark
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: '*.ts,*.js,*.json,*.md,*.py'
+      - file_size: true
+  - name: vertex
+    dir: /Users/echoenv/.openclaw/agents/vertex/agent
+    workspace: /Users/echoenv/.openclaw/workspace-vertex
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: '*.ts,*.js,*.json,*.md,*.py'
+      - file_size: true
+alerts:
+  stdout: true
+report:
+  format: table
+  include_idle: true
+  include_zero_output: true

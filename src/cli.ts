@@ -38,6 +38,8 @@ program
   .description('One-shot health check of all agents')
   .option('--fleet <dir>', 'Root directory containing agent subdirs')
   .option('--config <path>', 'Path to config file')
+  .option('--idle-threshold <duration>', 'Alert after this idle duration')
+  .option('--poll-interval <duration>', 'Check frequency')
   .action(async (opts) => {
     const config = await loadConfig(opts);
     await printStatus(config);
@@ -51,6 +53,8 @@ program
   .option('--since <duration>', 'Report period', '24h')
   .option('--format <type>', 'Output format: table, json, markdown', 'table')
   .option('--config <path>', 'Path to config file')
+  .option('--idle-threshold <duration>', 'Alert after this idle duration')
+  .option('--poll-interval <duration>', 'Check frequency')
   .action(async (opts) => {
     const config = await loadConfig(opts);
     const since = Date.now() - parseDuration(opts.since);

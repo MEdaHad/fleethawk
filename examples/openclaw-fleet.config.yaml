@@ -1,0 +1,55 @@
+# FleetHawk Config — MedaXP OpenClaw Fleet
+# 5 active agents monitored for silent failures
+
+fleet_dir: /Users/echoenv/.openclaw/agents
+idle_threshold: "30m"
+poll_interval: "5m"
+
+agents:
+  - name: echo
+    dir: /Users/echoenv/.openclaw/agents/main
+    workspace: /Users/echoenv/.openclaw/workspace
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: "*.md,*.json"
+
+  - name: neok
+    dir: /Users/echoenv/.openclaw/agents/neok
+    workspace: /Users/echoenv/.openclaw/workspace
+    output_signals:
+      - session_activity: true
+      - git_commits: true
+      - files: "*.ts,*.tsx,*.json"
+
+  - name: spark
+    dir: /Users/echoenv/.openclaw/agents/spark
+    workspace: /Users/echoenv/.openclaw/workspace
+    output_signals:
+      - session_activity: true
+      - file_size: true
+
+  - name: apex
+    dir: /Users/echoenv/.openclaw/agents/apex
+    workspace: /Users/echoenv/.openclaw/workspace
+    output_signals:
+      - session_activity: true
+      - file_size: true
+
+  - name: cipher
+    dir: /Users/echoenv/.openclaw/agents/cipher
+    workspace: /Users/echoenv/.openclaw/workspace
+    output_signals:
+      - session_activity: true
+      - file_size: true
+
+alerts:
+  stdout: true
+  telegram:
+    bot_token: "${TELEGRAM_BOT_TOKEN}"
+    chat_id: "534735126"
+
+report:
+  format: table
+  include_idle: true
+  include_zero_output: true

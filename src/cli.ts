@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { loadConfig } from './config/loader';
+import { loadConfig, discoverAgents } from './config/loader';
 import { FleetWatcher } from './watcher/fleet-watcher';
 import { printStatus } from './reporter/status';
 import { generateReport } from './reporter/report';
+import { generateConfigYaml } from './config/generator';
 import { parseDuration } from './utils/duration';
 
 const program = new Command();
@@ -54,6 +55,20 @@ program
     const config = await loadConfig(opts);
     const since = Date.now() - parseDuration(opts.since);
     await generateReport(config, new Date(since), opts.format);
+  });
+
+// ─── init ───
+program
+  .command('init')
+  .description('Auto-generate fleethawk.config.yaml from discovered agents')
+  .option('--fleet <dir>', 'Root directory containing agent subdirs')
+  .option('-o, --output <path>', 'Output path for config file', 'fleethawk.config.yaml')
+  .action(async (opts) => {
+    if (!opts.fleet) {
+      console.error('Error: --fleet is required for init');
+      process.exit(1);
+    }
+    generateConfigYaml(opts.fleet, opts.output);
   });
 
 program.parse();

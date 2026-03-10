@@ -62,7 +62,7 @@ idle_threshold: 30m
 poll_interval: 5m
 
 agents:
-  - name: echo
+  - name: jarvis
     dir: ~/.openclaw/agents/main/agent
     workspace: ~/.openclaw/workspace
     output_signals:
@@ -70,7 +70,7 @@ agents:
       - git_commits: true
       - session_activity: true
 
-  - name: neok
+  - name: neo
     dir: ~/.openclaw/agents/neok/agent
     workspace: ~/.openclaw/workspace-neok
     output_signals:

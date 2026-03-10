@@ -57,19 +57,19 @@ export class AgentScanner {
     };
   }
 
-  private async scanFiles(since: Date | null): Promise<{ modified: number; created: number }> {
-    const workspace = this.agent.workspace;
-    if (!fs.existsSync(workspace)) return { modified: 0, created: 0 };
+  private resolveHome(p: string): string {
+    if (p.startsWith('~')) {
+      return path.join(process.env.HOME || '', p.slice(1));
+    }
+    return p;
+  }
 
-    const signalConfig = this.agent.output_signals.find((s) => s.files);
-    if (!signalConfig?.files) return { modified: 0, created: 0 };
-
-    const patterns = signalConfig.files.split(',').map((p) => p.trim());
+  private async scanFilesInDir(dir: string, patterns: string[], since: Date | null): Promise<{ modified: number; created: number }> {
     let modified = 0;
     let created = 0;
 
     for (const pattern of patterns) {
-      const files = await glob(pattern, { cwd: workspace, absolute: true, nodir: true });
+      const files = await glob(pattern, { cwd: dir, absolute: true, nodir: true });
       for (const file of files) {
         try {
           const stat = fs.statSync(file);
@@ -77,12 +77,42 @@ export class AgentScanner {
             if (stat.mtimeMs > since.getTime()) modified++;
             if (stat.birthtimeMs > since.getTime()) created++;
           } else {
-            // First scan — count recent files (last hour)
             const oneHourAgo = Date.now() - 3_600_000;
             if (stat.mtimeMs > oneHourAgo) modified++;
           }
         } catch {
           // File may have been deleted between glob and stat
+        }
+      }
+    }
+
+    return { modified, created };
+  }
+
+  private async scanFiles(since: Date | null): Promise<{ modified: number; created: number }> {
+    const signalConfig = this.agent.output_signals.find((s) => s.files);
+    if (!signalConfig?.files) return { modified: 0, created: 0 };
+
+    const patterns = signalConfig.files.split(',').map((p) => p.trim());
+    let modified = 0;
+    let created = 0;
+
+    // Scan workspace
+    const workspace = this.agent.workspace;
+    if (fs.existsSync(workspace)) {
+      const result = await this.scanFilesInDir(workspace, patterns, since);
+      modified += result.modified;
+      created += result.created;
+    }
+
+    // Scan extra_paths
+    if (this.agent.extra_paths) {
+      for (const ep of this.agent.extra_paths) {
+        const resolved = this.resolveHome(ep);
+        if (fs.existsSync(resolved)) {
+          const result = await this.scanFilesInDir(resolved, patterns, since);
+          modified += result.modified;
+          created += result.created;
         }
       }
     }
@@ -152,30 +182,45 @@ export class AgentScanner {
     }
   }
 
+  private async scanZeroBytesInDir(dir: string): Promise<string[]> {
+    const zeroFiles: string[] = [];
+    const allFiles = await glob('**/*', {
+      cwd: dir,
+      absolute: true,
+      nodir: true,
+      ignore: ['node_modules/**', '.git/**', '*.log'],
+    });
+
+    const oneHourAgo = Date.now() - 3_600_000;
+
+    for (const file of allFiles) {
+      const stat = fs.statSync(file);
+      if (stat.size === 0 && stat.birthtimeMs > oneHourAgo) {
+        zeroFiles.push(path.relative(dir, file));
+      }
+    }
+
+    return zeroFiles;
+  }
+
   private async scanZeroByteFiles(): Promise<string[]> {
     const hasSignal = this.agent.output_signals.some((s) => s.file_size);
     if (!hasSignal) return [];
 
-    const workspace = this.agent.workspace;
-    if (!fs.existsSync(workspace)) return [];
-
     const zeroFiles: string[] = [];
 
     try {
-      const allFiles = await glob('**/*', {
-        cwd: workspace,
-        absolute: true,
-        nodir: true,
-        ignore: ['node_modules/**', '.git/**', '*.log'],
-      });
+      const workspace = this.agent.workspace;
+      if (fs.existsSync(workspace)) {
+        zeroFiles.push(...await this.scanZeroBytesInDir(workspace));
+      }
 
-      const oneHourAgo = Date.now() - 3_600_000;
-
-      for (const file of allFiles) {
-        const stat = fs.statSync(file);
-        // Only flag recent zero-byte files (created in last hour)
-        if (stat.size === 0 && stat.birthtimeMs > oneHourAgo) {
-          zeroFiles.push(path.relative(workspace, file));
+      if (this.agent.extra_paths) {
+        for (const ep of this.agent.extra_paths) {
+          const resolved = this.resolveHome(ep);
+          if (fs.existsSync(resolved)) {
+            zeroFiles.push(...await this.scanZeroBytesInDir(resolved));
+          }
         }
       }
     } catch (err) {

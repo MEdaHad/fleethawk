@@ -14,6 +14,7 @@ export interface AgentConfig {
   dir: string;
   workspace: string;
   output_signals: OutputSignal[];
+  extra_paths?: string[];
 }
 
 export interface OutputSignal {

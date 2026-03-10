@@ -120,32 +120,49 @@ export class AgentScanner {
     return { modified, created };
   }
 
-  private async scanGitCommits(since: Date | null): Promise<number> {
-    const hasGitSignal = this.agent.output_signals.some((s) => s.git_commits);
-    if (!hasGitSignal) return 0;
+  private buildGitLogOpts(since: Date | null): Record<string, any> {
+    const logOpts: Record<string, any> = { maxCount: 100 };
+    if (since) {
+      logOpts['--after'] = since.toISOString();
+    } else {
+      logOpts['--after'] = new Date(Date.now() - 86_400_000).toISOString();
+    }
+    return logOpts;
+  }
 
-    const workspace = this.agent.workspace;
-    const gitDir = path.join(workspace, '.git');
+  private async countGitCommitsIn(dir: string, since: Date | null): Promise<number> {
+    const gitDir = path.join(dir, '.git');
     if (!fs.existsSync(gitDir)) {
-      // Try parent directories
-      const parentGit = path.join(path.dirname(workspace), '.git');
+      const parentGit = path.join(path.dirname(dir), '.git');
       if (!fs.existsSync(parentGit)) return 0;
     }
 
     try {
-      const git = simpleGit(workspace);
-      const logOpts: Record<string, any> = { maxCount: 100 };
-      if (since) {
-        logOpts['--after'] = since.toISOString();
-      } else {
-        logOpts['--after'] = new Date(Date.now() - 86_400_000).toISOString();
-      }
-      const result = await git.log(logOpts);
+      const git = simpleGit(dir);
+      const result = await git.log(this.buildGitLogOpts(since));
       return result.total;
     } catch (err) {
-      log.debug(`Git scan failed for ${this.agent.name}: ${err}`);
+      log.debug(`Git scan failed for ${this.agent.name} in ${dir}: ${err}`);
       return 0;
     }
+  }
+
+  private async scanGitCommits(since: Date | null): Promise<number> {
+    const hasGitSignal = this.agent.output_signals.some((s) => s.git_commits);
+    if (!hasGitSignal) return 0;
+
+    let total = await this.countGitCommitsIn(this.agent.workspace, since);
+
+    if (this.agent.extra_paths) {
+      for (const ep of this.agent.extra_paths) {
+        const resolved = this.resolveHome(ep);
+        if (fs.existsSync(resolved)) {
+          total += await this.countGitCommitsIn(resolved, since);
+        }
+      }
+    }
+
+    return total;
   }
 
   private async scanSessionActivity(): Promise<number> {

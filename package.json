@@ -1,6 +1,6 @@
 {
   "name": "fleethawk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Silent failure detection for multi-agent AI fleets",
   "author": "MedaXP (https://github.com/medahad)",
   "license": "MIT",

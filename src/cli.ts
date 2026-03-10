@@ -13,7 +13,7 @@ const program = new Command();
 program
   .name('fleethawk')
   .description('Silent failure detection for multi-agent AI fleets')
-  .version('0.1.0');
+  .version('0.1.1');
 
 // ─── watch ───
 program

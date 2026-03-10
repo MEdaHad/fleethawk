@@ -135,8 +135,8 @@ $ fleethawk status --fleet ~/.openclaw/agents/
 ┌──────────┬────────────┬──────────────┬─────────────────┐
 │ Agent    │ Last Output│ Idle Time    │ Status          │
 ├──────────┼────────────┼──────────────┼─────────────────┤
-│ Echo     │ 2min ago   │ —            │ ✅ Active        │
-│ NeoK     │ 45min ago  │ 45m          │ ⚠️ Idle          │
+│ Jarvis     │ 2min ago   │ —            │ ✅ Active        │
+│ Neo     │ 45min ago  │ 45m          │ ⚠️ Idle          │
 │ Spark    │ 3hr ago    │ 3h           │ 🔴 Silent fail  │
 │ Apex     │ never      │ —            │ 🔴 No output    │
 │ Cipher   │ 1hr ago    │ 1h           │ ⚠️ Idle          │
@@ -151,13 +151,13 @@ $ fleethawk report --fleet ~/.openclaw/agents/ --since 24h --format markdown
 
 # Fleet Report — Last 24 Hours
 
-## Echo (main)
+## Jarvis (main)
 - Files modified: 14
 - Git commits: 6
 - Session messages: 89
 - Idle periods: 1 (45min, 03:00-03:45)
 
-## NeoK
+## Neo
 - Files modified: 2
 - Git commits: 1
 - Session messages: 12

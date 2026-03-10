@@ -12,14 +12,19 @@ export async function loadConfig(opts: Record<string, any>): Promise<FleetHawkCo
     return parseConfigFile(opts.config);
   }
 
-  // 2. Search CWD then global
+  // 2. If --fleet is given, use auto-discovery (skip config file search)
+  if (opts.fleet) {
+    return buildFromFlags(opts);
+  }
+
+  // 3. Search CWD then global
   const configPath = findConfigFile();
   if (configPath) {
     const config = parseConfigFile(configPath);
     return mergeCliOpts(config, opts);
   }
 
-  // 3. Build config from CLI flags only
+  // 4. Build config from CLI flags only
   return buildFromFlags(opts);
 }
 
@@ -76,38 +81,11 @@ function buildFromFlags(opts: Record<string, any>): FleetHawkConfig {
     process.exit(1);
   }
 
-  // Auto-discover agents from fleet directory
-  const agents: AgentConfig[] = [];
-
-  if (opts.fleet && fs.existsSync(opts.fleet)) {
-    const entries = fs.readdirSync(opts.fleet, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.isDirectory()) {
-        agents.push({
-          name: entry.name,
-          dir: path.join(opts.fleet, entry.name, 'agent'),
-          workspace: path.join(opts.fleet.replace('/agents', ''), `workspace-${entry.name}`),
-          output_signals: [
-            { files: '*.ts,*.tsx,*.js,*.json,*.md,*.py' },
-            { git_commits: true },
-            { session_activity: true },
-            { file_size: true },
-          ],
-        });
-      }
-    }
-  } else if (opts.dir) {
-    agents.push({
-      name: path.basename(opts.dir),
-      dir: opts.dir,
-      workspace: opts.dir,
-      output_signals: [
-        { files: '*' },
-        { git_commits: true },
-        { file_size: true },
-      ],
-    });
-  }
+  const agents = opts.fleet
+    ? discoverAgents(opts.fleet)
+    : opts.dir
+      ? [buildSingleAgent(opts.dir)]
+      : [];
 
   return {
     fleet_dir: fleetDir,
@@ -124,5 +102,64 @@ function buildFromFlags(opts: Record<string, any>): FleetHawkConfig {
       include_idle: true,
       include_zero_output: true,
     },
+  };
+}
+
+/**
+ * Auto-discover agents by scanning subdirectories of a fleet directory.
+ * Reads config.yaml from each agent dir (if present) to get the agent name.
+ */
+export function discoverAgents(fleetDir: string): AgentConfig[] {
+  const agents: AgentConfig[] = [];
+
+  if (!fs.existsSync(fleetDir)) return agents;
+
+  const entries = fs.readdirSync(fleetDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+
+    const agentDir = path.join(fleetDir, entry.name);
+    let agentName = entry.name;
+
+    // Read agent name from config.yaml if it exists
+    const configPath = path.join(agentDir, 'config.yaml');
+    if (fs.existsSync(configPath)) {
+      try {
+        const raw = fs.readFileSync(configPath, 'utf-8');
+        const parsed = yaml.load(raw) as Record<string, any>;
+        if (parsed?.name) {
+          agentName = parsed.name;
+        }
+      } catch {
+        // Fall back to directory name
+      }
+    }
+
+    agents.push({
+      name: agentName,
+      dir: path.join(agentDir, 'agent'),
+      workspace: path.join(fleetDir.replace('/agents', ''), `workspace-${entry.name}`),
+      output_signals: [
+        { files: '*.ts,*.tsx,*.js,*.json,*.md,*.py' },
+        { git_commits: true },
+        { session_activity: true },
+        { file_size: true },
+      ],
+    });
+  }
+
+  return agents;
+}
+
+function buildSingleAgent(dir: string): AgentConfig {
+  return {
+    name: path.basename(dir),
+    dir,
+    workspace: dir,
+    output_signals: [
+      { files: '*' },
+      { git_commits: true },
+      { file_size: true },
+    ],
   };
 }

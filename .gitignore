@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.fleethawk-state.json
+*.log
+.env
+.DS_Store
+coverage/

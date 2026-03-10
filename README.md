@@ -8,9 +8,9 @@ Built by [MedaXP](https://github.com/medahad) — born from running a 6-agent fl
 
 ## The Problem
 
-You assign 5 agents to work overnight. You wake up and ask: "What did everyone produce?"
+You assign 6 agents to work overnight. You wake up and ask: "What did everyone produce?"
 
-The answer is usually: Echo did everything. Three agents timed out silently. One produced a 0-byte file.
+The answer is usually: only 1 agents did its tasks. Three agents timed out silently. One produced a 0-byte file.
 
 No framework tells you this. Process monitors say "running." Orchestrators say "task dispatched." But **nobody checks if actual output was produced.**
 

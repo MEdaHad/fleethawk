@@ -21,22 +21,6 @@ agents:
       - git_commits: true
       - files: '*.ts,*.js,*.json,*.md,*.py'
       - file_size: true
-  - name: claude
-    dir: /Users/echoenv/.openclaw/agents/claude/agent
-    workspace: /Users/echoenv/.openclaw/workspace-claude
-    output_signals:
-      - session_activity: true
-      - git_commits: true
-      - files: '*.ts,*.js,*.json,*.md,*.py'
-      - file_size: true
-  - name: codex
-    dir: /Users/echoenv/.openclaw/agents/codex/agent
-    workspace: /Users/echoenv/.openclaw/workspace-codex
-    output_signals:
-      - session_activity: true
-      - git_commits: true
-      - files: '*.ts,*.js,*.json,*.md,*.py'
-      - file_size: true
   - name: echo
     dir: /Users/echoenv/.openclaw/agents/echo/agent
     workspace: /Users/echoenv/.openclaw/workspace-echo
@@ -64,14 +48,6 @@ agents:
   - name: neok
     dir: /Users/echoenv/.openclaw/agents/neok/agent
     workspace: /Users/echoenv/.openclaw/workspace-neok
-    output_signals:
-      - session_activity: true
-      - git_commits: true
-      - files: '*.ts,*.js,*.json,*.md,*.py'
-      - file_size: true
-  - name: nova
-    dir: /Users/echoenv/.openclaw/agents/nova/agent
-    workspace: /Users/echoenv/.openclaw/workspace-nova
     output_signals:
       - session_activity: true
       - git_commits: true

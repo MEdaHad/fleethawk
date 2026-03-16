@@ -1,53 +1,62 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
-import { FleetHawkConfig, AgentConfig } from './types';
+import { AgentConfig, FleetHawkConfig } from './types';
+import { buildAgentConfigsFromOpenClaw, expandHome, loadOpenClawConfig } from '../utils/openclaw';
 
 const CONFIG_NAMES = ['fleethawk.config.yaml', 'fleethawk.config.yml', '.fleethawkrc.yaml'];
 const GLOBAL_CONFIG_DIR = path.join(process.env.HOME || '~', '.config', 'fleethawk');
 
-export async function loadConfig(opts: Record<string, any>): Promise<FleetHawkConfig> {
-  // 1. Explicit config path
-  if (opts.config) {
-    const config = parseConfigFile(opts.config);
-    return mergeCliOpts(config, opts);
+export async function loadConfig(opts: Record<string, unknown>): Promise<FleetHawkConfig> {
+  const explicitConfig = typeof opts.config === 'string' ? opts.config : undefined;
+  const explicitOpenClaw = typeof opts.openclawConfig === 'string' ? opts.openclawConfig : undefined;
+  const openclawLoaded = loadOpenClawConfig(explicitOpenClaw);
+
+  if (explicitConfig) {
+    const config = parseConfigFile(explicitConfig);
+    return enrichConfig(mergeCliOpts(config, opts), openclawLoaded.path, openclawLoaded.config);
   }
 
-  // 2. If --fleet is given, use auto-discovery (skip config file search)
-  if (opts.fleet) {
-    return buildFromFlags(opts);
-  }
-
-  // 3. Search CWD then global
   const configPath = findConfigFile();
   if (configPath) {
     const config = parseConfigFile(configPath);
-    return mergeCliOpts(config, opts);
+    return enrichConfig(mergeCliOpts(config, opts), openclawLoaded.path, openclawLoaded.config);
   }
 
-  // 4. Build config from CLI flags only
-  return buildFromFlags(opts);
+  return enrichConfig(buildFromFlags(opts, openclawLoaded.config), openclawLoaded.path, openclawLoaded.config);
+}
+
+function enrichConfig(config: FleetHawkConfig, openclawPath: string, openclawConfig: ReturnType<typeof loadOpenClawConfig>['config']): FleetHawkConfig {
+  const openclawAgents = buildAgentConfigsFromOpenClaw(openclawConfig);
+  const agents = config.agents.length > 0
+    ? config.agents.map((agent) => {
+        const match = openclawAgents.find((item) => item.name.toLowerCase() === agent.name.toLowerCase());
+        return match ? { ...match, ...agent, model: match.model, fallback_chain: match.fallback_chain, raw: match.raw } : agent;
+      })
+    : openclawAgents;
+  return {
+    ...config,
+    agents,
+    config_path: openclawPath,
+    openclaw: openclawConfig,
+  };
 }
 
 function findConfigFile(): string | null {
-  // Check CWD
   for (const name of CONFIG_NAMES) {
-    const p = path.join(process.cwd(), name);
-    if (fs.existsSync(p)) return p;
+    const localPath = path.join(process.cwd(), name);
+    if (fs.existsSync(localPath)) return localPath;
   }
-  // Check global
   for (const name of CONFIG_NAMES) {
-    const p = path.join(GLOBAL_CONFIG_DIR, name);
-    if (fs.existsSync(p)) return p;
+    const globalPath = path.join(GLOBAL_CONFIG_DIR, name);
+    if (fs.existsSync(globalPath)) return globalPath;
   }
   return null;
 }
 
 function parseConfigFile(filePath: string): FleetHawkConfig {
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  const parsed = yaml.load(raw) as FleetHawkConfig;
-
-  // Resolve env vars in strings like ${FLEETHAWK_TG_TOKEN}
+  const raw = fs.readFileSync(filePath, 'utf8');
+  const parsed = (yaml.load(raw) as FleetHawkConfig | null) ?? {} as FleetHawkConfig;
   return resolveEnvVars(parsed);
 }
 
@@ -55,48 +64,46 @@ function resolveEnvVars<T>(obj: T): T {
   if (typeof obj === 'string') {
     return obj.replace(/\$\{([^}]+)\}/g, (_, key) => process.env[key] || '') as unknown as T;
   }
-  if (Array.isArray(obj)) {
-    return obj.map(resolveEnvVars) as unknown as T;
-  }
+  if (Array.isArray(obj)) return obj.map((item) => resolveEnvVars(item)) as unknown as T;
   if (obj && typeof obj === 'object') {
-    const result: Record<string, any> = {};
-    for (const [key, val] of Object.entries(obj)) {
-      result[key] = resolveEnvVars(val);
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      result[key] = resolveEnvVars(value);
     }
     return result as T;
   }
   return obj;
 }
 
-function mergeCliOpts(config: FleetHawkConfig, opts: Record<string, any>): FleetHawkConfig {
-  if (opts.fleet) config.fleet_dir = opts.fleet;
-  if (opts.idleThreshold) config.idle_threshold = opts.idleThreshold;
-  if (opts.pollInterval) config.poll_interval = opts.pollInterval;
-  return config;
+function mergeCliOpts(config: FleetHawkConfig, opts: Record<string, unknown>): FleetHawkConfig {
+  return {
+    ...config,
+    fleet_dir: (typeof opts.fleet === 'string' ? opts.fleet : config.fleet_dir) || process.cwd(),
+    idle_threshold: (typeof opts.idleThreshold === 'string' ? opts.idleThreshold : config.idle_threshold) || '30m',
+    poll_interval: (typeof opts.pollInterval === 'string' ? opts.pollInterval : config.poll_interval) || '5m',
+    doctor_interval: (typeof opts.doctorInterval === 'string' ? opts.doctorInterval : config.doctor_interval) || '30m',
+    report: {
+      format: config.report?.format ?? 'table',
+      include_idle: config.report?.include_idle ?? true,
+      include_zero_output: config.report?.include_zero_output ?? true,
+    },
+    alerts: config.alerts ?? { stdout: true },
+    agents: config.agents ?? [],
+  };
 }
 
-function buildFromFlags(opts: Record<string, any>): FleetHawkConfig {
-  const fleetDir = opts.fleet || opts.dir;
-  if (!fleetDir) {
-    console.error('Error: --fleet or --dir required when no config file found');
-    process.exit(1);
-  }
-
-  const agents = opts.fleet
-    ? discoverAgents(opts.fleet)
-    : opts.dir
-      ? [buildSingleAgent(opts.dir)]
-      : [];
-
+function buildFromFlags(opts: Record<string, unknown>, openclawConfig: ReturnType<typeof loadOpenClawConfig>['config']): FleetHawkConfig {
+  const fleetDir = typeof opts.fleet === 'string' ? opts.fleet : process.cwd();
+  const dir = typeof opts.dir === 'string' ? opts.dir : undefined;
+  const discovered = dir ? [buildSingleAgent(dir)] : typeof opts.fleet === 'string' ? discoverAgents(fleetDir) : [];
   return {
-    fleet_dir: fleetDir,
-    idle_threshold: opts.idleThreshold || '30m',
-    poll_interval: opts.pollInterval || '5m',
-    agents,
+    fleet_dir: expandHome(fleetDir),
+    idle_threshold: typeof opts.idleThreshold === 'string' ? opts.idleThreshold : '30m',
+    poll_interval: typeof opts.pollInterval === 'string' ? opts.pollInterval : '5m',
+    doctor_interval: typeof opts.doctorInterval === 'string' ? opts.doctorInterval : '30m',
+    agents: discovered.length > 0 ? discovered : buildAgentConfigsFromOpenClaw(openclawConfig),
     alerts: {
       stdout: true,
-      ...(opts.alert === 'telegram' ? { telegram: { bot_token: '', chat_id: '' } } : {}),
-      ...(opts.alert === 'discord' ? { discord: { webhook_url: '' } } : {}),
     },
     report: {
       format: 'table',
@@ -106,61 +113,28 @@ function buildFromFlags(opts: Record<string, any>): FleetHawkConfig {
   };
 }
 
-/**
- * Auto-discover agents by scanning subdirectories of a fleet directory.
- * Reads config.yaml from each agent dir (if present) to get the agent name.
- */
 export function discoverAgents(fleetDir: string): AgentConfig[] {
-  const agents: AgentConfig[] = [];
-
-  if (!fs.existsSync(fleetDir)) return agents;
-
-  const entries = fs.readdirSync(fleetDir, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-
-    const agentDir = path.join(fleetDir, entry.name);
-    let agentName = entry.name;
-
-    // Read agent name from config.yaml if it exists
-    const configPath = path.join(agentDir, 'config.yaml');
-    if (fs.existsSync(configPath)) {
-      try {
-        const raw = fs.readFileSync(configPath, 'utf-8');
-        const parsed = yaml.load(raw) as Record<string, any>;
-        if (parsed?.name) {
-          agentName = parsed.name;
-        }
-      } catch {
-        // Fall back to directory name
-      }
-    }
-
-    agents.push({
-      name: agentName,
-      dir: path.join(agentDir, 'agent'),
-      workspace: path.join(fleetDir.replace('/agents', ''), `workspace-${entry.name}`),
-      output_signals: [
-        { files: '*.ts,*.tsx,*.js,*.json,*.md,*.py' },
-        { git_commits: true },
-        { session_activity: true },
-        { file_size: true },
-      ],
-    });
-  }
-
-  return agents;
+  const dir = expandHome(fleetDir);
+  if (!fs.existsSync(dir)) return [];
+  const entries = fs.readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isDirectory());
+  return entries.map((entry) => ({
+    name: entry.name,
+    dir: path.join(dir, entry.name, 'agent'),
+    workspace: path.join(dir, entry.name),
+    output_signals: [
+      { files: '*.ts,*.tsx,*.js,*.jsx,*.json,*.md,*.py,*.yaml,*.yml' },
+      { git_commits: true },
+      { session_activity: true },
+      { file_size: true },
+    ],
+  }));
 }
 
 function buildSingleAgent(dir: string): AgentConfig {
   return {
     name: path.basename(dir),
-    dir,
-    workspace: dir,
-    output_signals: [
-      { files: '*' },
-      { git_commits: true },
-      { file_size: true },
-    ],
+    dir: expandHome(dir),
+    workspace: expandHome(dir),
+    output_signals: [{ files: '*' }, { git_commits: true }, { session_activity: true }, { file_size: true }],
   };
 }

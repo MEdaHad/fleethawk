@@ -108,7 +108,7 @@ Sample output:
 ✅ scout — model google/gemini-2.5-pro valid
 ✅ forge — model anthropic/claude-opus-4-6 valid
 ⚠️ pixel — model ollama/llama-3.2:8b (local model, cannot verify remotely)
-✅ sage — model nvidia-kimi/kimi-k2.5 valid
+✅ sage — model moonshot/kimi-k2.5 valid
 ✅ Gateway running (pid 4821, port 18789)
 ✅ No workspace collisions detected
 ✅ No identity bleed between agents

@@ -32,8 +32,8 @@ Sample output:
 │ nova     │ openai/gpt-5.4              │ 15m ago    │ 15m  │ 8     │ 1       │ Fix payment webhook        │ ✅ active    │
 │ scout    │ google/gemini-2.5-pro        │ 1h ago     │ 1h   │ 3     │ 0       │ Research API docs          │ ⚠️ idle      │
 │ forge    │ anthropic/claude-opus-4-6    │ 3h ago     │ 3h   │ 0     │ 0       │ Deep code review           │ 🔴 silent    │
-│ pixel    │ ollama/llama-3.2:8b          │ never      │ n/a  │ 0     │ 0       │ —                          │ 🔴 no output │
-│ sage     │ nvidia-kimi/kimi-k2.5        │ 45m ago    │ 45m  │ 2     │ 0       │ Summarize meeting notes    │ ⚠️ idle      │
+│ pixel    │ ollama/qwen3.5-35b-a3b          │ never      │ n/a  │ 0     │ 0       │ —                          │ 🔴 no output │
+│ sage     │ moonshot/kimi-k2.5        │ 45m ago    │ 45m  │ 2     │ 0       │ Summarize meeting notes    │ ⚠️ idle      │
 └──────────┴──────────────────────────────┴────────────┴──────┴───────┴─────────┴────────────────────────────┴──────────────┘
 ```
 

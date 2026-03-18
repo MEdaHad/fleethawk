@@ -25,13 +25,16 @@ Sample output:
 ```text
 🦅 FleetHawk Status
 
-┌──────────┬──────────────────────────┬────────────┬──────┬───────┬─────────┬────────────────────────────┬──────────────┐
-│ Agent    │ Model                    │ Last Output│ Idle │ Files │ Commits │ Last Task                  │ Status       │
-├──────────┼──────────────────────────┼────────────┼──────┼───────┼─────────┼────────────────────────────┼──────────────┤
-│ neok     │ openai-codex/gpt-5.4     │ 2m ago     │ 2m   │ 14    │ 2       │ Merge ClawGuard into FH    │ ✅ active    │
-│ memo     │ ollama/qwen3.5:9b        │ 51m ago    │ 51m  │ 0     │ 0       │ Summarize ops notes        │ ⚠️ idle      │
-│ apex     │ nvidia-minimax/.../m2.5  │ never      │ n/a  │ 0     │ 0       │ —                          │ ❌ no_output │
-└──────────┴──────────────────────────┴────────────┴──────┴───────┴─────────┴────────────────────────────┴──────────────┘
+┌──────────┬──────────────────────────────┬────────────┬──────┬───────┬─────────┬────────────────────────────┬──────────────┐
+│ Agent    │ Model                        │ Last Output│ Idle │ Files │ Commits │ Last Task                  │ Status       │
+├──────────┼──────────────────────────────┼────────────┼──────┼───────┼─────────┼────────────────────────────┼──────────────┤
+│ atlas    │ anthropic/claude-sonnet-4-6  │ 2m ago     │ 2m   │ 14    │ 2       │ Refactor auth module       │ ✅ active    │
+│ nova     │ openai/gpt-5.4              │ 15m ago    │ 15m  │ 8     │ 1       │ Fix payment webhook        │ ✅ active    │
+│ scout    │ google/gemini-2.5-pro        │ 1h ago     │ 1h   │ 3     │ 0       │ Research API docs          │ ⚠️ idle      │
+│ forge    │ anthropic/claude-opus-4-6    │ 3h ago     │ 3h   │ 0     │ 0       │ Deep code review           │ 🔴 silent    │
+│ pixel    │ ollama/llama-3.2:8b          │ never      │ n/a  │ 0     │ 0       │ —                          │ 🔴 no output │
+│ sage     │ nvidia-kimi/kimi-k2.5        │ 45m ago    │ 45m  │ 2     │ 0       │ Summarize meeting notes    │ ⚠️ idle      │
+└──────────┴──────────────────────────────┴────────────┴──────┴───────┴─────────┴────────────────────────────┴──────────────┘
 ```
 
 ### `fleethawk watch`
@@ -60,13 +63,31 @@ Sample markdown excerpt:
 ```md
 # FleetHawk Report
 
-## neok
-- Model: openai-codex/gpt-5.4
+## atlas
+- Model: anthropic/claude-sonnet-4-6
 - Status: active
 - Files modified: 14
 - Git commits: 2
 - Session messages: 8
-- Last task: Merge ClawGuard into FleetHawk
+- Last task: Refactor auth module
+- Errors: none
+
+## nova
+- Model: openai/gpt-5.4
+- Status: active
+- Files modified: 8
+- Git commits: 1
+- Session messages: 5
+- Last task: Fix payment webhook
+- Errors: none
+
+## scout
+- Model: google/gemini-2.5-pro
+- Status: idle
+- Files modified: 3
+- Git commits: 0
+- Session messages: 12
+- Last task: Research API docs
 - Errors: none
 ```
 
@@ -76,6 +97,26 @@ Full fleet diagnostic: model validity, provider mapping, stale gateway, agentDir
 ```bash
 fleethawk doctor
 fleethawk doctor --json
+```
+
+Sample output:
+```text
+🦅 FleetHawk Doctor
+
+✅ atlas — model anthropic/claude-sonnet-4-6 valid
+✅ nova — model openai/gpt-5.4 valid
+✅ scout — model google/gemini-2.5-pro valid
+✅ forge — model anthropic/claude-opus-4-6 valid
+⚠️ pixel — model ollama/llama-3.2:8b (local model, cannot verify remotely)
+✅ sage — model nvidia-kimi/kimi-k2.5 valid
+✅ Gateway running (pid 4821, port 18789)
+✅ No workspace collisions detected
+✅ No identity bleed between agents
+⚠️ pixel workspace dir does not exist: ~/.agents/workspace-pixel
+✅ DB env check passed — NEON_DATABASE_URL set, no localhost in production
+✅ No ghost agents in monitoring config
+
+Results: 10 passed, 2 warnings, 0 critical
 ```
 
 ### `fleethawk verify models`
@@ -89,7 +130,7 @@ fleethawk verify models
 Deep inspection for one agent.
 
 ```bash
-fleethawk verify agent neok
+fleethawk verify agent atlas
 ```
 
 ### `fleethawk verify db`
@@ -146,10 +187,10 @@ FleetHawk reads from `~/.openclaw/openclaw.json` by default. You can also point 
 
 ## Real issues caught
 These are the kinds of failures FleetHawk is designed to catch:
-- Model misrouting: NeoK running on kimi instead of GPT-5.4
-- 86 broken production labs found via automated QA
-- Ghost agents in monitoring config
-- Workspace identity bleed between Echo and MEMO
+- Model misrouting: an agent configured for GPT-5.4 silently running on a fallback model
+- Broken production resources found via automated QA
+- Ghost agents in monitoring config that no longer exist
+- Workspace identity bleed between agents sharing directories
 - Malformed database URLs (double `postgresql://` prefix)
 - Stale gateway state after config changes
 

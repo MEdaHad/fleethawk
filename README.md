@@ -1,4 +1,4 @@
-# **FleetHawk** — Trust your AI fleet before you trust its output.
+# **FleetHawk** - Trust your AI fleet before you trust its output.
 
 ## What is FleetHawk
 FleetHawk is a CLI for AI fleet diagnostics, monitoring, and release safety. It works with OpenClaw, Claude Code, Codex, and any agent framework that leaves useful config, workspace, or session artifacts behind.
